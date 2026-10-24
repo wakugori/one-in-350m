@@ -40,34 +40,8 @@
   </div>
 
   <div class="settings panel">
-    <div class="setting">
-      <h3>生まれる世界</h3>
-      <div class="seg" data-group="world">
-        <button class="seg-btn on" data-note="過去のある年のアメリカに生まれ、その時代の統計で一生を生きます。">過去の世界</button>
-        <button class="seg-btn" data-note="いまの世界のまま、一生を生きます。いまの統計が最後まで続きます。">いまの世界</button>
-        <button class="seg-btn" data-note="国勢調査局の予測にもとづく、これからのアメリカに生まれます。">これからの世界</button>
-      </div>
-      <p class="small muted" data-note-for="world">過去のある年のアメリカに生まれ、その時代の統計で一生を生きます。</p>
-    </div>
-    <div class="setting">
-      <h3>生まれる州の決め方</h3>
-      <div class="seg" data-group="pick">
-        <button class="seg-btn on" data-note="出生で選ぶと、州ごとの年間出生数に応じて生まれる州が決まります。">いま生まれている赤ちゃん</button>
-        <button class="seg-btn" data-note="人口で選ぶと、州ごとの人口の割合に応じて生まれる州が決まります。">いま生きている3億4千万人</button>
-      </div>
-      <p class="small muted" data-note-for="pick">出生で選ぶと、州ごとの年間出生数に応じて生まれる州が決まります。</p>
-    </div>
-    <div class="setting">
-      <h3>ひとつの人生の長さ</h3>
-      <div class="seg" data-group="len">
-        <button class="seg-btn" data-note="">約30分</button>
-        <button class="seg-btn on" data-note="">約1時間</button>
-        <button class="seg-btn" data-note="">約1時間30分</button>
-      </div>
-      <p class="small muted">その州の平均寿命まで生きるのにかかる時間の目安です。</p>
-    </div>
     <button id="btn-born" class="btn-primary">生まれる</button>
-    <p class="small muted center">死や暴力のような重い出来事も、統計どおりに起こります。場面は描きません。15歳以上</p>
+    <p class="small muted center">死や暴力のような重い出来事も起こります。15歳以上</p>
     <p class="small center" id="dex-top-wrap" hidden><button id="btn-dex-top" class="btn-link">死因図鑑 <span id="dex-count-top">0</span> / <span class="dex-total"></span></button></p>
   </div>
 
@@ -89,7 +63,7 @@
 
   <section class="panel">
     <h2>ひと息</h2>
-    <p>5歳、15歳、30歳で時間が止まり、ひとつの問いが投げかけられます。この人の人生とあなたの人生を重ねて思い浮かべ、よければ一行残しておいてください。最後には、この人にひとこと声をかけられます。</p>
+    <p>5歳、15歳、30歳で、ひとつの問いが投げかけられます。この人の人生とあなたの人生を重ねて思い浮かべながら、答えを選んでください。</p>
   </section>
 
   <footer class="footer small muted">
@@ -116,7 +90,6 @@
       <div class="lbl">名前</div>
       <div class="cert-name">チャーリー</div>
       <p class="cert-lead">1993年10月、イリノイ州アーリントンハイツ（シカゴ郊外）で、暮らし向きのよい家庭に男の子として生まれました。両親は穏健な共和党支持者です。家族は長老派の教会に通っています。</p>
-      <p class="small muted">平均寿命まで生きると、約1時間かかります（1年 ≈ 47秒）。途中で閉じても、このブラウザに死因だけは残ります。</p>
       <div class="fields">
         <div><div class="lbl">性別</div><b>男性</b></div>
         <div><div class="lbl">出生国</div><b>アメリカ</b></div>
@@ -145,12 +118,8 @@
   <header class="topbar-life">
     <span class="brand">3億5千万分の<span class="accent">1</span></span>
     <span class="big-age"><span id="life-age">0</span>歳</span>
-    <span class="small muted"><span id="life-year">1993</span>年 · チャーリー · 1年 ≈ 47秒</span>
-    <span class="ctrls">
-      <button class="ctrl" data-toast="この人生は、止められません。">❚❚ 一時停止</button><button class="ctrl on">1×</button><button class="ctrl" data-toast="早送りしても、行き着く先は同じです。">4×</button><button class="ctrl" data-toast="早送りしても、行き着く先は同じです。">16×</button><button class="ctrl" data-toast="この人生に、おまかせはありません。">おまかせ</button><button class="ctrl" data-toast="この人生から、途中で降りることはできません。">中断</button>
-    </span>
+    <span class="small muted"><span id="life-year">1993</span>年 · チャーリー</span>
   </header>
-  <div id="toast" class="toast"></div>
   <div class="life-grid">
     <aside class="col">
       <div class="card id-card">
@@ -230,11 +199,6 @@
       <p id="end-reason" class="reason"></p>
     </div>
     <div class="panel" id="end-notes" hidden></div>
-    <div class="panel">
-      <h3>この人に、ひとこと</h3>
-      <textarea id="last-word" rows="2" maxlength="120" placeholder="（ここに残した言葉は、どこにも送られません）"></textarea>
-      <p class="small"><button id="btn-word" class="btn-secondary">残す</button> <span id="word-note" class="muted"></span></p>
-    </div>
     <div class="panel" id="end-stats"></div>
     <div class="end-actions">
       <button id="btn-again" class="btn-primary">もう一度生まれる</button>
