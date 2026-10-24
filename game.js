@@ -522,8 +522,8 @@ function die(id) {
   writeSave(save);
 
   $('end-kicker').textContent = `1993 – ${ev.y} · アメリカ`;
-  $('end-title').textContent = 'チャーリー';
-  $('end-title').className = 'end-title';
+  $('end-title').textContent = 'チャーリー：死亡';
+  $('end-title').className = 'end-title dead';
   $('end-h-summary').textContent = 'この人生';
   $('end-summary').textContent = lifeSummary() + `${age}歳のとき、${d.text}`;
   if (firstDeath) {
