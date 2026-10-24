@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>3億5千万分の1 · ランダムなアメリカ人として生まれる人生シミュレーション（パロディ）</title>
+<meta name="description" content="3億5千万人のアメリカ人のうち、ランダムな誰かとして生まれ、その人生を最後まで生きてみます。どこで、誰として生まれるかは選べません。">
+<meta property="og:title" content="3億5千万分の1">
+<meta property="og:description" content="ランダムなアメリカ人として生まれ、一度きりの人生を生きる。どこで、誰として生まれるかは選べません。">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='4' fill='%23101722'/%3E%3Ctext x='16' y='23' font-size='20' text-anchor='middle' fill='%23e8475b' font-family='serif'%3E1%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+
+<!-- タイトル -->
+<section id="screen-title" class="screen active">
+  <header class="topbar">
+    <span class="lang">English</span><span class="lang">한국어</span><span class="lang current">日本語</span><span class="lang">繁體中文</span><span class="lang">Español</span>
+  </header>
+  <p class="version">v0.9.10 beta · 無料の人生シミュレーション · 50州の実際の統計にもとづく（とされる） · 15歳以上</p>
+  <div class="hero">
+    <div class="hero-left">
+      <h1 class="big-title">3億<br>5千万<br>分の<span class="accent">1</span></h1>
+      <p class="lead">いまこの瞬間にも、9秒に1人ほどのアメリカ人が生まれています。そのひとりになって、たった一度の人生を最後まで生きてみます。どこで、誰の子として生まれるかは選べません。あなたがそうだったように。</p>
+      <div class="counters">
+        <div><span id="cnt-born" class="cnt">0</span><span class="cnt-label">このページを開いてから生まれたアメリカ人</span></div>
+        <div><span id="cnt-died" class="cnt">0</span><span class="cnt-label">同じ時間に世を去った人</span></div>
+      </div>
+      <p class="theme"><span class="tag">今日のテーマ</span> 自由　今日生まれるすべての人生が、このテーマをともに通り過ぎます。</p>
+      <p class="live">いま<span id="live-count">21,763</span>人が、このシミュレーションの中でそれぞれの人生を生きています。</p>
+    </div>
+    <aside class="panel stats-panel">
+      <h2>いま生まれる赤ちゃんだったら</h2>
+      <p class="small muted">CDC 2024年の出生数 362万8,934人をもとに（州の割合はおおよそ）</p>
+      <div class="barlist" id="state-bars"></div>
+    </aside>
+  </div>
+
+  <div class="settings panel">
+    <div class="setting">
+      <h3>生まれる世界</h3>
+      <div class="seg" data-group="world">
+        <button class="seg-btn on" data-note="過去のある年のアメリカに生まれ、その時代の統計で一生を生きます。">過去の世界</button>
+        <button class="seg-btn" data-note="いまの世界のまま、一生を生きます。いまの統計が最後まで続きます。">いまの世界</button>
+        <button class="seg-btn" data-note="国勢調査局の予測にもとづく、これからのアメリカに生まれます。">これからの世界</button>
+      </div>
+      <p class="small muted" data-note-for="world">過去のある年のアメリカに生まれ、その時代の統計で一生を生きます。</p>
+    </div>
+    <div class="setting">
+      <h3>生まれる州の決め方</h3>
+      <div class="seg" data-group="pick">
+        <button class="seg-btn on" data-note="出生で選ぶと、州ごとの年間出生数に応じて生まれる州が決まります。">いま生まれている赤ちゃん</button>
+        <button class="seg-btn" data-note="人口で選ぶと、州ごとの人口の割合に応じて生まれる州が決まります。">いま生きている3億4千万人</button>
+      </div>
+      <p class="small muted" data-note-for="pick">出生で選ぶと、州ごとの年間出生数に応じて生まれる州が決まります。</p>
+    </div>
+    <div class="setting">
+      <h3>ひとつの人生の長さ</h3>
+      <div class="seg" data-group="len">
+        <button class="seg-btn" data-note="">約30分</button>
+        <button class="seg-btn on" data-note="">約1時間</button>
+        <button class="seg-btn" data-note="">約1時間30分</button>
+      </div>
+      <p class="small muted">その州の平均寿命まで生きるのにかかる時間の目安です。</p>
+    </div>
+    <button id="btn-born" class="btn-primary">生まれる</button>
+    <p class="small muted center">死や暴力のような重い出来事も、統計どおりに起こります。場面は描きません。15歳以上</p>
+    <p class="small center" id="dex-top-wrap" hidden><button id="btn-dex-top" class="btn-link">死因図鑑 <span id="dex-count-top">0</span> / <span class="dex-total"></span></button></p>
+  </div>
+
+  <section class="panel">
+    <h2>みんなの人生</h2>
+    <p class="small muted">それぞれが生きてみた人生と、感じたことを分かち合います。名前も連絡先もなく、人生だけが残ります。</p>
+    <div id="feed"></div>
+  </section>
+
+  <section class="panel">
+    <h2>メモリアルに残された人生</h2>
+    <div class="memorial" id="memorial"></div>
+  </section>
+
+  <section class="panel">
+    <h2>同じ1秒に生まれた人たち</h2>
+    <p>あなたが生まれるその1秒にも、アメリカのあちこちでほかの赤ちゃんが生まれています。どこで生まれるかを選んだ人は、ひとりもいません。</p>
+  </section>
+
+  <section class="panel">
+    <h2>ひと息</h2>
+    <p>5歳、15歳、30歳で時間が止まり、ひとつの問いが投げかけられます。この人の人生とあなたの人生を重ねて思い浮かべ、よければ一行残しておいてください。最後には、この人にひとこと声をかけられます。</p>
+  </section>
+
+  <footer class="footer small muted">
+    <p>このゲームは「80億分の1（1in8b.life）」のパロディで、公式とは関係ありません。アメリカの人口は実際には約3億4千万人です（四捨五入はアメリカ式）。</p>
+    <p>実在の出来事をもとにした部分があります。選択肢と文章は創作で、暴力を肯定する意図はありません。</p>
+  </footer>
+</section>
+
+<!-- ルーレット -->
+<section id="screen-roll" class="screen">
+  <div class="roll-wrap">
+    <p class="muted">3億4,000万人の中から選んでいます</p>
+    <div class="roll-name" id="roll-name">—</div>
+    <div class="roll-place" id="roll-place">—</div>
+    <p class="muted small" id="roll-note">&nbsp;</p>
+  </div>
+</section>
+
+<!-- 人生 -->
+<section id="screen-life" class="screen">
+  <header class="life-head">
+    <div>
+      <div class="life-name">チャーリー</div>
+      <div class="small muted">アメリカ · イリノイ州 · 男性</div>
+    </div>
+    <div class="life-age"><span id="life-year">1993</span>年 · <span id="life-age">0</span>歳</div>
+  </header>
+  <div class="life-grid">
+    <main class="life-main">
+      <div class="event panel" id="event">
+        <div class="event-meta"><span id="ev-when"></span><span id="ev-flag" class="flag"></span></div>
+        <h2 id="ev-title"></h2>
+        <p id="ev-text"></p>
+        <div id="ev-choices" class="choices"></div>
+        <div id="ev-result" class="result"></div>
+      </div>
+    </main>
+    <aside class="life-side">
+      <div class="panel" id="cons-panel" hidden>
+        <h3>歴史の整合性</h3>
+        <div class="meter"><div class="meter-fill" id="m-cons"></div></div>
+        <p class="small muted"><span id="v-cons">100</span> / 100</p>
+        <p class="small muted">この人生が、本来の筋書きからどれだけ外れていないか。0 になると、歴史が帳尻を合わせます。</p>
+      </div>
+      <div class="panel" id="stat-list"></div>
+      <div class="panel log-panel">
+        <h3>これまでの人生</h3>
+        <ol id="life-log" class="life-log"></ol>
+      </div>
+    </aside>
+  </div>
+</section>
+
+<!-- 終わり -->
+<section id="screen-end" class="screen">
+  <div class="end-wrap">
+    <p class="end-kicker" id="end-kicker"></p>
+    <h1 class="end-title" id="end-title"></h1>
+    <p class="end-sub" id="end-sub"></p>
+    <div class="panel">
+      <h3 id="end-h-summary">この人生</h3>
+      <p id="end-summary"></p>
+      <p id="end-reason" class="reason"></p>
+    </div>
+    <div class="panel" id="end-notes" hidden></div>
+    <div class="panel">
+      <h3>この人に、ひとこと</h3>
+      <textarea id="last-word" rows="2" maxlength="120" placeholder="（ここに残した言葉は、どこにも送られません）"></textarea>
+      <p class="small"><button id="btn-word" class="btn-secondary">残す</button> <span id="word-note" class="muted"></span></p>
+    </div>
+    <div class="panel" id="end-stats"></div>
+    <div class="end-actions">
+      <button id="btn-again" class="btn-primary">もう一度生まれる</button>
+      <button id="btn-dex" class="btn-secondary" hidden>死因図鑑 <span id="dex-count">0</span> / <span class="dex-total"></span></button>
+      <button id="btn-share" class="btn-secondary">結果をコピー</button>
+      <a id="btn-x" class="btn-secondary" target="_blank" rel="noopener">X に投稿</a>
+    </div>
+    <p class="small muted center" id="share-note">&nbsp;</p>
+  </div>
+</section>
+
+<!-- 図鑑 -->
+<section id="screen-dex" class="screen">
+  <div class="end-wrap">
+    <h1 class="dex-title">死因図鑑</h1>
+    <p class="muted">これまでにあなたが迎えた最期です。<span id="dex-count2">0</span> / <span class="dex-total"></span></p>
+    <div id="dex-list" class="dex-list"></div>
+    <div class="end-actions"><button id="btn-dex-back" class="btn-secondary">戻る</button><button id="btn-dex-born" class="btn-primary">生まれる</button></div>
+  </div>
+</section>
+
+</div>
+<script src="game.js"></script>
+</body>
+</html>
