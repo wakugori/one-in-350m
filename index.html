@@ -108,36 +108,111 @@
   </div>
 </section>
 
+<!-- 出生届 -->
+<section id="screen-cert" class="screen">
+  <div class="cert">
+    <div class="cert-head"><span class="cert-title">出生届</span><span class="cert-no" id="cert-no"></span></div>
+    <div class="cert-body">
+      <div class="lbl">名前</div>
+      <div class="cert-name">チャーリー</div>
+      <p class="cert-lead">1993年10月、イリノイ州アーリントンハイツ（シカゴ郊外）で、暮らし向きのよい家庭に男の子として生まれました。両親は穏健な共和党支持者です。家族は長老派の教会に通っています。</p>
+      <p class="small muted">平均寿命まで生きると、約1時間かかります（1年 ≈ 47秒）。途中で閉じても、このブラウザに死因だけは残ります。</p>
+      <div class="fields">
+        <div><div class="lbl">性別</div><b>男性</b></div>
+        <div><div class="lbl">出生国</div><b>アメリカ</b></div>
+        <div><div class="lbl">出生地</div><b>アーリントンハイツ（郊外）</b></div>
+        <div><div class="lbl">家の暮らし向き</div><b><span class="dots">●●●●○</span> 5段階中4<br>· 国内で上から2番目の20%</b></div>
+        <div><div class="lbl">両親の仕事</div><b>母：先物取引所のトレーダー · 父：建築家</b></div>
+        <div><div class="lbl">両親の家</div><b>持ち家（一戸建て）</b></div>
+        <div><div class="lbl">宗教</div><b>キリスト教（長老派）</b></div>
+        <div><div class="lbl">両親の支持政党</div><b>共和党（穏健派）</b></div>
+        <div><div class="lbl">平均寿命</div><b>75.5歳</b></div>
+        <div><div class="lbl">5歳未満で亡くなる確率</div><b>1.0%</b></div>
+        <div><div class="lbl">きょうだい</div><b>なし（のちに妹が1人）</b></div>
+        <div><div class="lbl">生まれた年の大統領</div><b>民主党（1期目の1年目）</b></div>
+      </div>
+      <p class="small muted">いま生まれる赤ちゃんのうち3.4%がイリノイ州で生まれます。1年に約12万人、29人に1人の割合です。数字は1993年の米国の統計（CDC・国連）による概数です。</p>
+      <h3 class="sec">同じ1秒に、アメリカのどこかで生まれた人たち</h3>
+      <div id="cert-peers" class="peers"></div>
+      <p class="small muted">この人たちの人生も、同じ統計にしたがって最後まで流れていきます。あなたのそばで、いっしょにお見せします。</p>
+      <button id="btn-start" class="btn-primary block">人生を始める</button>
+    </div>
+  </div>
+</section>
+
 <!-- 人生 -->
 <section id="screen-life" class="screen">
-  <header class="life-head">
-    <div>
-      <div class="life-name">チャーリー</div>
-      <div class="small muted">アメリカ · イリノイ州 · 男性</div>
-    </div>
-    <div class="life-age"><span id="life-year">1993</span>年 · <span id="life-age">0</span>歳</div>
+  <header class="topbar-life">
+    <span class="brand">3億5千万分の<span class="accent">1</span></span>
+    <span class="big-age"><span id="life-age">0</span>歳</span>
+    <span class="small muted"><span id="life-year">1993</span>年 · チャーリー · 1年 ≈ 47秒</span>
+    <span class="ctrls">
+      <button class="ctrl" data-toast="この人生は、止められません。">❚❚ 一時停止</button><button class="ctrl on">1×</button><button class="ctrl" data-toast="早送りしても、行き着く先は同じです。">4×</button><button class="ctrl" data-toast="早送りしても、行き着く先は同じです。">16×</button><button class="ctrl" data-toast="この人生に、おまかせはありません。">おまかせ</button><button class="ctrl" data-toast="この人生から、途中で降りることはできません。">中断</button>
+    </span>
   </header>
+  <div id="toast" class="toast"></div>
   <div class="life-grid">
-    <main class="life-main">
-      <div class="event panel" id="event">
-        <div class="event-meta"><span id="ev-when"></span><span id="ev-flag" class="flag"></span></div>
+    <aside class="col">
+      <div class="card id-card">
+        <div class="id-head"><span>身元記録 · USA</span><span>1993</span></div>
+        <div class="id-body">
+          <div class="avatar" id="avatar"></div>
+          <div class="id-fields">
+            <div class="id-name">チャーリー</div>
+            <dl>
+              <dt>性別</dt><dd>男性</dd>
+              <dt>出生</dt><dd>アメリカ · 1993年10月</dd>
+              <dt>居住地</dt><dd id="id-home">アーリントンハイツ, イリノイ州</dd>
+              <dt>宗教</dt><dd id="id-faith">キリスト教（長老派）</dd>
+              <dt>生まれた家庭</dt><dd><span class="dots">●●●●○</span></dd>
+              <dt>学歴</dt><dd id="id-edu">就学前</dd>
+            </dl>
+          </div>
+        </div>
+        <div class="mrz">I&lt;USA&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;CHARLIE&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;<br>931014MUSA&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;</div>
+      </div>
+      <div class="card">
+        <div class="card-h"><h3>状態</h3><span class="small muted">0–100</span></div>
+        <div id="stat-list"></div>
+        <div class="money">
+          <div><div class="lbl">純資産</div><b id="v-money">—</b><div class="small muted" id="v-money-note">まだ親の家で暮らしています</div></div>
+          <div><div class="lbl">年収</div><b id="v-income">—</b><div class="small muted">家庭の暮らし向き 5段階中4</div></div>
+        </div>
+      </div>
+      <div class="card" id="cons-panel" hidden>
+        <div class="card-h"><h3>歴史の整合性</h3><span class="small muted" id="v-cons">100</span></div>
+        <div class="meter"><div class="meter-fill" id="m-cons"></div></div>
+        <p class="small muted">この人生が、本来の筋書きからどれだけ外れていないか。0 になると、歴史が帳尻を合わせます。</p>
+      </div>
+    </aside>
+    <main class="col">
+      <div class="card scene"><div class="scene-art" id="scene-art"></div><div class="scene-cap" id="scene-cap">イリノイ州アーリントンハイツ · 一戸建て · 両親と一緒に</div></div>
+      <div class="card event" id="event">
+        <div class="card-h"><h3 id="ev-kind">決断</h3><span><span id="ev-flag" class="flag"></span> <span class="small muted" id="ev-when"></span></span></div>
         <h2 id="ev-title"></h2>
-        <p id="ev-text"></p>
+        <div id="ev-text"></div>
         <div id="ev-choices" class="choices"></div>
         <div id="ev-result" class="result"></div>
       </div>
-    </main>
-    <aside class="life-side">
-      <div class="panel" id="cons-panel" hidden>
-        <h3>歴史の整合性</h3>
-        <div class="meter"><div class="meter-fill" id="m-cons"></div></div>
-        <p class="small muted"><span id="v-cons">100</span> / 100</p>
-        <p class="small muted">この人生が、本来の筋書きからどれだけ外れていないか。0 になると、歴史が帳尻を合わせます。</p>
-      </div>
-      <div class="panel" id="stat-list"></div>
-      <div class="panel log-panel">
-        <h3>これまでの人生</h3>
+      <div class="card">
+        <div class="card-h"><h3>人生の記録</h3><span class="small muted">新しい順</span></div>
+        <p class="small muted live-line">いま、このシミュレーションの中で21,568人がともに生きています · イリノイ州に、あなたのほかに642人</p>
         <ol id="life-log" class="life-log"></ol>
+      </div>
+    </main>
+    <aside class="col">
+      <div class="card">
+        <div class="card-h"><h3>家族と暮らし</h3></div>
+        <dl class="family" id="family"></dl>
+      </div>
+      <div class="card">
+        <div class="card-h"><h3>同じ1秒に生まれた人たち</h3><span class="small muted">いま、同じ年齢で</span></div>
+        <div id="life-peers" class="peers"></div>
+      </div>
+      <div class="card">
+        <div class="card-h"><h3>人生地図</h3><span class="small muted">1マス = 1年</span></div>
+        <div id="life-map" class="life-map"></div>
+        <p class="small muted">色が鮮やかなほど幸福だった年 · 枠のマス = 平均寿命 75.5歳</p>
       </div>
     </aside>
   </div>

@@ -1,9 +1,11 @@
 'use strict';
 
-// ---------- 能力値 ----------
-const STATS = { con: '保守', deb: '弁舌', net: '人脈・資金', fame: '知名度', faith: '信仰' };
-const START = { con: 10, deb: 10, net: 10, fame: 0, faith: 20 };
+// ---------- 状態（本家と同じ 4 つに、知名度を足した） ----------
+const STATS = { hp: '健康', joy: '幸福', know: '知識', rel: '人間関係', fame: '知名度' };
+const STAT_COLOR = { hp: 'var(--hp)', joy: 'var(--joy)', know: 'var(--know)', rel: 'var(--rel)', fame: 'var(--fame)' };
+const START = { hp: 80, joy: 60, know: 45, rel: 50, fame: 0 };
 const BIRTH = { y: 1993, m: 10, d: 14 };
+const LIFE_EXP = 75.5;
 
 // ---------- 死因 ----------
 // text は「N歳のとき、」に続く文。reason は 2 回目の死から見せる。
@@ -36,11 +38,11 @@ const DEATHS = {
   cancel: { name: '日付だけは守られた', text: '家で休んでいた正午すぎ、自宅の庭に隕石が落ちました。', reason: '日付は合っていました。場所が違います。' },
   wrong_utah: { name: 'ユタ大学', text: 'ソルトレイクシティの大学の、誰もいない広場で、机に座った瞬間に地面が割れました。', reason: '会場はユタ大学ではありません。オレムのユタ・バレー大学です。よく間違えられます。' },
 
-  fail_speech: { kind: 'fail', name: '沈黙', text: '壇上で言葉が出ず、沈黙が3分続いたところで、演台が床ごと抜けました。', reason: '弁舌が足りませんでした（30以上）。' },
-  fail_montgomery: { kind: 'fail', name: 'ベッドごと', text: '団体を作ると決めた翌朝、ベッドごと消えていました。何を主張すればいいのか、まだ分かっていませんでした。', reason: '保守と弁舌が、どちらも35以上必要でした。' },
-  fail_friess: { kind: 'fail', name: '下りの階段', text: '投資家の名前を言い間違えた瞬間、階段がエスカレーターのように下へ動き出し、止まりませんでした。', reason: '弁舌45以上か、人脈・資金35以上が必要でした。' },
-  fail_trumpjr: { kind: 'fail', name: '保留音', text: '陣営にかけた電話の保留音が鳴りやまないまま、受話器に吸い込まれました。', reason: '人脈・資金が40以上必要でした。' },
-  fail_pmw: { kind: 'fail', name: '切り抜き', text: '机に座って3人目の大学1年生に完璧に言い返され、その切り抜きが拡散した夜、画面の中に吸い込まれました。', reason: '弁舌が55以上必要でした。' },
+  fail_speech: { kind: 'fail', name: '沈黙', text: '壇上で言葉が出ず、沈黙が3分続いたところで、演台が床ごと抜けました。', reason: '知識が足りませんでした（60以上）。' },
+  fail_montgomery: { kind: 'fail', name: 'ベッドごと', text: '団体を作ると決めた翌朝、ベッドごと消えていました。何を主張すればいいのか、まだ分かっていませんでした。', reason: '知識65以上と人間関係60以上が、どちらも必要でした。' },
+  fail_friess: { kind: 'fail', name: '下りの階段', text: '投資家の名前を言い間違えた瞬間、階段がエスカレーターのように下へ動き出し、止まりませんでした。', reason: '知識75以上か、人間関係70以上が必要でした。' },
+  fail_trumpjr: { kind: 'fail', name: '保留音', text: '陣営にかけた電話の保留音が鳴りやまないまま、受話器に吸い込まれました。', reason: '人間関係が75以上必要でした。' },
+  fail_pmw: { kind: 'fail', name: '切り抜き', text: '机に座って3人目の大学1年生に完璧に言い返され、その切り抜きが拡散した夜、画面の中に吸い込まれました。', reason: '知識が85以上必要でした。' },
   fail_election: { kind: 'fail', name: '透明人間', text: 'いくつ大学を回っても誰も気づいてくれず、最後のキャンパスで、本当に透明になりました。', reason: '知名度が70以上必要でした。' },
 
   c_fridge: { kind: 'collapse', name: '冷蔵庫', text: '空から落ちてきた冷蔵庫の下敷きになりました。中には何も入っていませんでした。' },
@@ -56,147 +58,155 @@ const DEATH_IDS = Object.keys(DEATHS);
 const COLLAPSE_IDS = DEATH_IDS.filter(id => DEATHS[id].kind === 'collapse');
 
 // ---------- 人生の出来事 ----------
-// choice: t 文言 / fx 能力 / c 整合性 / d 整合性が尽きたときの最期 / death 即座の最期 / req 必要な能力（any: どれか1つ）/ fail 足りないときの最期 / res 結果 / bio 生涯の要約
-// years: 出来事の前に流れる年の記録 / pause: ひと息の問い
+// choice: t 文言 / fx 状態 / c 整合性 / d 整合性が尽きたときの最期 / death 即座の最期 / req 必要な状態（any: どれか1つ）/ fail 足りないときの最期 / res 結果 / bio 生涯の要約
+// years: 出来事の前に流れる年の記録 / life: 暮らしの表示の更新 / pause: ひと息の問い
 const EVENTS = [
-  { y: 1995, m: 4, title: 'はじめての言葉', text: '1歳半。家族が、あなたの最初の言葉を待っています。', choices: [
-    { t: '「ノー」', fx: { con: 5, deb: 5 }, res: '最初の言葉は「ノー」でした。差し出されたスプーンに向かって、はっきりと。両親は顔を見合わせて、少しだけ笑いました。' },
-    { t: '「ママ」', fx: { faith: 5 }, c: -10, res: '最初の言葉は「ママ」でした。その晩、母は祖母に三回電話をかけました。' },
-    { t: '「わんわん」', c: -10, res: '最初の言葉は「わんわん」でした。家に犬はいません。窓の外の何を見ていたのかは、いまも分かりません。' },
+  { y: 1995, m: 4, years: [[1994, 11, '歩けるようになりました。最初に向かったのは、父の仕事机の下でした。']], title: 'はじめての言葉', text: '1歳半。家族が、あなたの最初の言葉を待っています。', choices: [
+    { t: '「ノー」', fx: { know: 5, joy: 5 }, res: '最初の言葉は「ノー」でした。差し出されたスプーンに向かって、はっきりと。両親は顔を見合わせて、少しだけ笑いました。' },
+    { t: '「ママ」', fx: { rel: 5, joy: 5 }, c: -10, res: '最初の言葉は「ママ」でした。その晩、母は祖母に三回電話をかけました。' },
+    { t: '「わんわん」', fx: { joy: 10 }, c: -10, res: '最初の言葉は「わんわん」でした。家に犬はいません。窓の外の何を見ていたのかは、いまも分かりません。' },
   ] },
-  { pause: true, y: 1999, m: 4, years: [[1998, '4歳。三輪車で家の前の坂を下り、初めて膝をすりむきました。']], q: '5歳。あなたが5歳のとき、いちばん欲しかったものは何でしたか。' },
-  { y: 2005, m: 4, years: [[1999, '小学校に入りました。'], [2001, '7歳。大人たちがテレビの前で黙りこんだ朝がありました。その日のことは、ずっと覚えています。'], [2003, '9歳。サンタクロースの正体に気づきましたが、しばらく黙っていました。']], title: '図書室', text: '学校の図書室。背の届く棚から、一冊を選びます。', choices: [
-    { t: '経済学者ミルトン・フリードマンの本', fx: { con: 15, deb: 5 }, res: '難しい言葉ばかりでしたが、最後まで読みました。「政府にできることは、思っているより少ない」。11歳のあなたには、それが世界の秘密のように思えました。', bio: '11歳で経済学の本を読みました。' },
-    { t: '『ハリー・ポッター』', c: -25, d: 'potter', res: '11歳の誕生日に、ホグワーツからの手紙は届きませんでした。それからしばらく、夜になると少しだけ窓の外を気にしていました。' },
-    { t: 'カール・マルクスの本', c: -45, d: 'marx', res: '表紙の髭のおじさんが、誰かに似ている気がしました。中身はひとつも分かりませんでしたが、なぜか最後まで読みました。' },
+  { pause: true, y: 1999, m: 2, years: [[1997, 6, '妹が生まれました。しばらくのあいだ、自分の椅子を妹に貸しませんでした。', { sister: true }], [1998, 6, '三輪車で家の前の坂を下り、初めて膝をすりむきました。']], q: '5歳。あなたが5歳のとき、いちばん欲しかったものは何でしたか。' },
+  { y: 2005, m: 4, life: { edu: '中学校' }, years: [[1999, 9, '小学校に入りました。歩いて通える、レンガ造りの学校です。', { edu: '小学校' }], [2001, 9, '大人たちがテレビの前で黙りこんだ朝がありました。その日、町じゅうの家に星条旗が出ました。'], [2003, 12, 'サンタクロースの正体に気づきましたが、妹のために黙っていました。'], [2004, 10, '父と初めて大統領選挙の話をしました。父は、穏やかな声で共和党に入れると言いました。']], title: '図書室', text: '中学校の図書室。背の届く棚から、一冊を選びます。', choices: [
+    { t: '経済学者ミルトン・フリードマンの本', fx: { know: 10 }, res: '難しい言葉ばかりでしたが、最後まで読みました。「政府にできることは、思っているより少ない」。11歳のあなたには、それが世界の秘密のように思えました。', bio: '11歳で経済学の本を読みました。' },
+    { t: '『ハリー・ポッター』', fx: { joy: 10, know: 5 }, c: -25, d: 'potter', res: '11歳の誕生日に、ホグワーツからの手紙は届きませんでした。それからしばらく、夜になると少しだけ窓の外を気にしていました。' },
+    { t: 'カール・マルクスの本', fx: { know: 5 }, c: -45, d: 'marx', res: '表紙の髭のおじさんが、誰かに似ている気がしました。中身はひとつも分かりませんでしたが、なぜか最後まで読みました。' },
   ] },
   { y: 2007, m: 7, title: 'ボーイスカウト', text: '夏のキャンプ。焚き火の向こうで、隊長があなたに聞きます。「最高位のイーグルスカウトを目指してみるか」', choices: [
-    { t: '目指す', fx: { net: 10, faith: 5 }, res: 'ロープの結び方を覚え、山を歩き、知らない家の雪かきをしました。何年もかけて、胸にいちばん重いバッジがつきました。', bio: 'イーグルスカウトになりました。' },
-    { t: 'スカウトを辞めて、家でゲームをする', c: -25, res: 'その夏、あなたは画面の向こうで何度も世界を救いました。現実の世界は、特に救われませんでした。' },
-    { t: '焚き火を囲んで、政治の話をする', fx: { con: 5, deb: 5 }, c: -5, res: 'マシュマロが焦げるまで、税金の話をしました。誰も聞いていませんでした。それでも、話すのは楽しいことでした。' },
+    { t: '目指す', fx: { rel: 10, hp: 5 }, res: 'ロープの結び方を覚え、山を歩き、知らない家の雪かきをしました。何年もかけて、胸にいちばん重いバッジがつきました。', bio: 'イーグルスカウトになりました。' },
+    { t: 'スカウトを辞めて、家でゲームをする', fx: { joy: 10, hp: -5 }, c: -25, res: 'その夏、あなたは画面の向こうで何度も世界を救いました。現実の世界は、特に救われませんでした。' },
+    { t: '焚き火を囲んで、政治の話をする', fx: { know: 5, rel: -5 }, c: -5, res: 'マシュマロが焦げるまで、税金の話をしました。誰も聞いていませんでした。それでも、話すのは楽しいことでした。' },
   ] },
-  { pause: true, y: 2009, m: 2, years: [[2008, '14歳。初めて大統領選挙を、テレビで最後まで見ました。']], q: '15歳。あなたが15歳のとき、何に腹を立てていましたか。' },
-  { y: 2009, m: 9, title: '高校の放課後', text: '高校に入りました。放課後を何に使いますか。', choices: [
-    { t: 'バスケットボール部に入る', fx: { net: 10 }, res: 'ベンチを温める日のほうが多い三年間でした。それでも、仲間をどう乗せればいいかは、ベンチからのほうがよく見えました。', bio: '高校ではバスケットボール部でした。' },
-    { t: 'スピーチと討論の練習をする', fx: { deb: 15 }, res: '相手の言葉の端をつかむのが、驚くほど得意でした。勝つたびに、少しずつ友達が減りました。', bio: '高校で討論の腕を磨きました。' },
-    { t: '演劇部でミュージカルに出る', c: -25, d: 'musical', res: 'どんなに練習しても、ソロの高い音は出ませんでした。カーテンコールで、母がいちばん大きな拍手をしていました。' },
+  { pause: true, y: 2009, m: 2, years: [[2008, 11, '初めての黒人の大統領が決まる夜を、テレビで最後まで見ました。両親は、静かにテレビを消しました。']], q: '15歳。あなたが15歳のとき、何に腹を立てていましたか。' },
+  { y: 2009, m: 9, life: { edu: '高校' }, title: '高校の放課後', text: '地元の公立高校に入りました。生徒は2,000人ほどいます。放課後を何に使いますか。', choices: [
+    { t: 'バスケットボール部に入る', fx: { rel: 10, hp: 10 }, res: 'ベンチを温める日のほうが多い三年間でした。それでも、仲間をどう乗せればいいかは、ベンチからのほうがよく見えました。', bio: '高校ではバスケットボール部でした。' },
+    { t: 'スピーチと討論の練習をする', fx: { know: 10, rel: -5 }, res: '相手の言葉の端をつかむのが、驚くほど得意でした。勝つたびに、少しずつ友達が減りました。', bio: '高校で討論の腕を磨きました。' },
+    { t: '演劇部でミュージカルに出る', fx: { joy: 15, rel: 5 }, c: -25, d: 'musical', res: 'どんなに練習しても、ソロの高い音は出ませんでした。カーテンコールで、母がいちばん大きな拍手をしていました。' },
   ] },
   { y: 2010, m: 9, title: '選挙のボランティア', text: '連邦上院議員の選挙。近所の選挙事務所が、高校生のボランティアを募集しています。共和党の候補は、たまたまあなたと同じ名字です（親戚ではありません）。', choices: [
-    { t: '同じ名字の、共和党の候補を手伝う', fx: { net: 10, con: 5 }, res: 'チラシを配り、電話をかけ、知らない人に何度も切られました。候補は勝ちました。あなたの名字が、一晩だけ誇らしいものになりました。', bio: '16歳で選挙のボランティアをしました。' },
-    { t: '民主党の候補を手伝う', c: -40, d: 'giannoulias', res: '事務所のピザはおいしく、仲間は親切でした。候補は負けました。帰り道、空がいつもより少しだけ低く見えました。' },
-    { t: '手伝わない', c: -15, res: 'その秋は、選挙より大事なことがたくさんありました。たとえば、隣のクラスの誰かのことです。' },
+    { t: '同じ名字の、共和党の候補を手伝う', fx: { rel: 5, know: 5 }, res: 'チラシを配り、電話をかけ、知らない人に何度も切られました。候補は勝ちました。あなたの名字が、一晩だけ誇らしいものになりました。', bio: '16歳で選挙のボランティアをしました。' },
+    { t: '民主党の候補を手伝う', fx: { rel: 5, joy: 5 }, c: -40, d: 'giannoulias', res: '事務所のピザはおいしく、仲間は親切でした。候補は負けました。帰り道、空がいつもより少しだけ低く見えました。' },
+    { t: '手伝わない', fx: { joy: 5 }, c: -15, res: 'その秋は、選挙より大事なことがたくさんありました。たとえば、隣のクラスの誰かのことです。' },
   ] },
   { y: 2011, m: 3, title: '歴史の教科書', text: '歴史の教科書を読んでいて、中身がどこか片寄っていると感じました。', choices: [
-    { t: '保守系のニュースサイトに意見を送る', fx: { fame: 15, con: 5, deb: 5 }, res: '送った意見は記事になりました。数日後、17歳のあなたはテレビの経済ニュースに出ていました。スタジオの照明は、思っていたよりずっと熱いものでした。', bio: '17歳でテレビに初めて出ました。' },
+    { t: '保守系のニュースサイトに意見を送る', fx: { fame: 15, know: 5 }, res: '送った意見は記事になりました。数日後、17歳のあなたはテレビの経済ニュースに出ていました。スタジオの照明は、思っていたよりずっと熱いものでした。', bio: '17歳でテレビに初めて出ました。' },
     { t: 'TikTok に告発の動画を上げる', death: 'tiktok' },
-    { t: '先生に質問して、納得する', c: -25, res: '先生は授業のあと、30分かけて丁寧に答えてくれました。あなたは納得しました。教室を出るとき、なぜか少しだけ寂しい気がしました。' },
+    { t: '先生に質問して、納得する', fx: { know: 5, joy: 5 }, c: -25, res: '先生は授業のあと、30分かけて丁寧に答えてくれました。あなたは納得しました。教室を出るとき、なぜか少しだけ寂しい気がしました。' },
   ] },
   { y: 2011, m: 11, title: '学食のクッキー', text: '高校最後の年。学食のクッキーが値上げされました。', choices: [
-    { t: '値上げに抗議して、ボイコットを呼びかける', fx: { deb: 10, net: 5, fame: 5 }, res: '一週間、誰もクッキーを買いませんでした。値段は元に戻りませんでした。それでもあなたは知りました。人は、正しさよりも怒りでよく動くのだと。', bio: '学食のクッキーのボイコットを率いました。' },
-    { t: '黙って買う', c: -15, res: '少し高くなったクッキーは、前と同じ味がしました。' },
-    { t: '学区に補助金を求める署名を集める', c: -40, d: 'subsidy', res: '署名は300筆集まりました。学区は補助金を出し、クッキーの値段は元に戻りました。みんなが喜びました。あなたも、少しだけ。' },
+    { t: '値上げに抗議して、ボイコットを呼びかける', fx: { rel: 5, fame: 5, know: 5 }, res: '一週間、誰もクッキーを買いませんでした。値段は元に戻りませんでした。それでもあなたは知りました。人は、正しさよりも怒りでよく動くのだと。', bio: '学食のクッキーのボイコットを率いました。' },
+    { t: '黙って買う', fx: { joy: 5 }, c: -15, res: '少し高くなったクッキーは、前と同じ味がしました。' },
+    { t: '学区に補助金を求める署名を集める', fx: { rel: 10, joy: 10 }, c: -40, d: 'subsidy', res: '署名は300筆集まりました。学区は補助金を出し、クッキーの値段は元に戻りました。みんなが喜びました。あなたも、少しだけ。' },
   ] },
   { y: 2012, m: 3, flag: '分岐点', title: '進路', text: '第一志望の陸軍士官学校から、不合格の通知が届きました。手元には、テキサスの私立大学の合格通知があります。', choices: [
-    { t: '合格した大学には行かず、地元の2年制大学に行く', res: '家から通える2年制大学に決めました。……そこにも、長くはいないことになります。' },
-    { t: 'テキサスの大学に進学する', c: -40, d: 'baylor', res: '寮の同室の相手は、生まれて初めて会う種類の人間でした。テキサスの空は広く、自分の町が少しだけ小さく見えました。' },
-    { t: '浪人して、士官学校を受け直す', c: -40, d: 'westpoint', res: '一年間、毎朝走りました。二度目の封筒は、一度目より少しだけ厚く見えました。' },
+    { t: '合格した大学には行かず、地元の2年制大学に行く', fx: { joy: -5 }, res: '家から通える2年制大学に決めました。……そこにも、長くはいないことになります。' },
+    { t: 'テキサスの大学に進学する', fx: { joy: 10, know: 10 }, c: -40, d: 'baylor', res: '寮の同室の相手は、生まれて初めて会う種類の人間でした。テキサスの空は広く、自分の町が少しだけ小さく見えました。' },
+    { t: '浪人して、士官学校を受け直す', fx: { hp: 15 }, c: -40, d: 'westpoint', res: '一年間、毎朝走りました。二度目の封筒は、一度目より少しだけ厚く見えました。' },
   ] },
   { y: 2012, m: 5, flag: '分岐点', title: '大学の催し', text: '近くの大学で、高校生が政治について話す催しがあります。登壇の枠がひとつ空いています。', choices: [
-    { t: '登壇する', req: { deb: 30 }, fail: 'fail_speech', fx: { fame: 5, deb: 5 }, res: '話し終えると、客席の後ろから白髪の男性が近づいてきました。「君、名前は」' },
+    { t: '登壇する', req: { know: 60 }, fail: 'fail_speech', fx: { fame: 5, know: 5 }, res: '話し終えると、客席の後ろから白髪の男性が近づいてきました。「君、名前は」' },
     { t: '緊張するので、やめておく', death: 'skip_speech' },
     { t: '登壇して、国民皆保険の必要性を訴える', death: 'healthcare' },
   ] },
   { y: 2012, m: 5, flag: '分岐点', title: '白髪の男性', text: '白髪の男性は、引退した実業家だと名乗りました。「大学になんか行くな。団体を作れ」。初めて会った72歳が、18歳のあなたにそう言っています。', choices: [
-    { t: '言われたとおりにする', req: { con: 35, deb: 35 }, fail: 'fail_montgomery', fx: { net: 10 }, res: '家に帰って、両親にどう切り出すかを一晩考えました。結局、何も言わずに始めることにしました。', bio: '18歳で団体を立ち上げました。' },
+    { t: '言われたとおりにする', req: { know: 65, rel: 60 }, fail: 'fail_montgomery', fx: { rel: 5, joy: 5 }, res: '家に帰って、両親にどう切り出すかを一晩考えました。結局、何も言わずに始めることにしました。', bio: '18歳で団体を立ち上げました。', life: { income: '$0（無給）' } },
     { t: '「まずは学位を取ってから考えます」', death: 'degree_first' },
     { t: '名刺だけもらっておく', c: -30, res: '名刺は机の引き出しの奥にしまわれました。ときどき夢の中で、あの男性が何か言いかけて、そこで目が覚めました。' },
   ] },
-  { y: 2012, m: 6, title: '団体の名前', text: '高校の卒業式の翌日。借りたガレージで、団体の名前を考えます。', choices: [
-    { t: 'Turning Point USA', fx: { con: 5 }, res: '「転換点」。ガレージの壁に、マジックで大きく書きました。' },
+  { y: 2012, m: 6, years: [[2012, 6, '高校を卒業しました。卒業式では、卒業生を代表してスピーチをしました。']], title: '団体の名前', text: '卒業式の翌日。借りたガレージで、団体の名前を考えます。', choices: [
+    { t: 'Turning Point USA', fx: { joy: 5 }, res: '「転換点」。ガレージの壁に、マジックで大きく書きました。', life: { scene: 'garage', cap: 'イリノイ州 · 借りたガレージ · 机がひとつ' } },
     { t: 'Turning Left USA', c: -60, d: 'turning_left', res: '書類の受付の人が、一度だけ顔を上げてあなたを見ました。' },
     { t: '若者と考える未来の会', c: -20, res: '誰からも反対されない名前でした。誰からも覚えられない名前でもありました。' },
   ] },
   { y: 2012, m: 8, flag: '分岐点', title: '党大会', text: 'フロリダで開かれた共和党の全国大会に、どうにか潜り込みました。団体にはお金がありません。あなたは大口の献金者25人の顔と名前を暗記してきました。', choices: [
-    { t: '階段で投資家を捕まえて、売り込む', req: { deb: 45, net: 35, any: true }, fail: 'fail_friess', fx: { net: 20 }, res: '階段の踊り場でつかまえた投資家と話せたのは、上の階に着くまでの数十秒でした。数週間後、実家の郵便受けに1万ドルの小切手が届きました。', bio: '献金者を階段でつかまえて、団体のお金を得ました。' },
-    { t: 'ビュッフェで食べて帰る', c: -40, d: 'buffet', res: 'ビュッフェのエビは、人生でいちばんおいしいエビでした。名刺は一枚も減りませんでした。' },
-    { t: '民主党の大会ものぞいてみる', c: -40, d: 'dnc', res: '向こうの会場も、風船の色が違うだけで、熱気は同じでした。あなたは少し混乱して帰りました。' },
+    { t: '階段で投資家を捕まえて、売り込む', req: { know: 75, rel: 70, any: true }, fail: 'fail_friess', fx: { rel: 10, fame: 5 }, res: '階段の踊り場でつかまえた投資家と話せたのは、上の階に着くまでの数十秒でした。数週間後、実家の郵便受けに1万ドルの小切手が届きました。団体の口座は、それで初めて4桁を超えました。', bio: '献金者を階段でつかまえて、団体のお金を得ました。' },
+    { t: 'ビュッフェで食べて帰る', fx: { joy: 10 }, c: -40, d: 'buffet', res: 'ビュッフェのエビは、人生でいちばんおいしいエビでした。名刺は一枚も減りませんでした。' },
+    { t: '民主党の大会ものぞいてみる', fx: { know: 5 }, c: -40, d: 'dnc', res: '向こうの会場も、風船の色が違うだけで、熱気は同じでした。あなたは少し混乱して帰りました。' },
   ] },
-  { y: 2012, m: 11, title: '授業と団体', text: '2年制大学の授業と、団体の仕事。両方は無理になってきました。', choices: [
-    { t: '授業をやめて、団体に専念する', fx: { net: 5 }, res: '1学期で辞めました。学位は、生涯持たないことになります。', bio: '2年制大学を1学期で辞めました。' },
-    { t: '団体をたたんで、授業に専念する', c: -50, d: 'study', res: '久しぶりに出た授業で、教授が「いい質問だ」と言ってくれました。ガレージの看板は、雨で少しずつ読めなくなっていきました。' },
-    { t: '授業中に、こっそり団体のメールを返す', fx: { net: 5 }, c: -10, res: 'どちらも中途半端になりました。' },
+  { y: 2012, m: 11, life: { edu: '2年制大学' }, title: '授業と団体', text: '2年制大学の授業と、団体の仕事。両方は無理になってきました。', choices: [
+    { t: '授業をやめて、団体に専念する', fx: { rel: 5, know: -5 }, res: '1学期で辞めました。学位は、生涯持たないことになります。', bio: '2年制大学を1学期で辞めました。', life: { edu: '2年制大学 中退' } },
+    { t: '団体をたたんで、授業に専念する', fx: { know: 10 }, c: -50, d: 'study', res: '久しぶりに出た授業で、教授が「いい質問だ」と言ってくれました。ガレージの看板は、雨で少しずつ読めなくなっていきました。' },
+    { t: '授業中に、こっそり団体のメールを返す', fx: { hp: -5 }, c: -10, res: 'どちらも中途半端になりました。' },
   ] },
-  { y: 2014, m: 5, years: [[2013, '20歳。団体の最初の一年が終わりました。事務所はまだガレージです。']], title: '団体を大きくする', text: '団体はまだ小さなままです。何に力を入れますか。', choices: [
-    { t: '大学を回って、学生と言い合いを重ねる', fx: { deb: 15, fame: 5 }, res: '知らない大学で、知らない学生と言い合いました。負けた夜は、帰りの車で何度も言い返しを練習しました。' },
-    { t: '献金者を回る', fx: { net: 15 }, res: '笑顔で握手をして、同じ話を百回しました。百一回目に、小切手が出てきました。' },
+  { y: 2014, m: 5, years: [[2013, 6, '団体の最初の一年が終わりました。収入は7万9千ドル。事務所はまだガレージです。']], title: '団体を大きくする', text: '団体はまだ小さなままです。何に力を入れますか。', choices: [
+    { t: '大学を回って、学生と言い合いを重ねる', fx: { know: 10, fame: 5, hp: -5 }, res: '知らない大学で、知らない学生と言い合いました。負けた夜は、帰りの車で何度も言い返しを練習しました。' },
+    { t: '献金者を回る', fx: { rel: 10 }, res: '笑顔で握手をして、同じ話を百回しました。百一回目に、小切手が出てきました。' },
     { t: 'テレビに出続ける', fx: { fame: 15 }, res: 'テレビ局の控え室に、自分用のネクタイを一本置かせてもらうようになりました。' },
-    { t: 'ヨーロッパをバックパックで旅する', c: -20, res: 'パリのカフェで、知らない人と政治の話をしました。誰も怒りませんでした。それが、なぜか落ち着きませんでした。' },
+    { t: 'ヨーロッパをバックパックで旅する', fx: { joy: 15, know: 5 }, c: -20, res: 'パリのカフェで、知らない人と政治の話をしました。誰も怒りませんでした。それが、なぜか落ち着きませんでした。' },
   ] },
-  { y: 2015, m: 9, title: 'オンライン授業', text: 'ニューヨークの小さな大学で、パートタイムのオンライン授業に登録しました。', choices: [
+  { y: 2015, m: 9, life: { income: '$27,000', money: '$4万', moneyNote: '実家を出て、ひとりで暮らしています', cap: '団体の事務所 · 机が十数台' }, title: 'オンライン授業', text: 'ニューヨークの小さな大学で、パートタイムのオンライン授業に登録しました。団体からの給料は、年に2万7千ドルほどです。', choices: [
     { t: 'いつの間にか、やめている', res: 'ログインのパスワードを、いつの間にか忘れていました。' },
-    { t: '最後までやり切って、学位を取る', c: -40, d: 'kings', res: '卒業の日、画面越しの拍手を聞きながら、あなたは少しだけ泣きました。' },
-    { t: '授業中に、教授を言い負かす', fx: { deb: 5 }, c: -5, res: 'マイクはミュートのままでした。' },
+    { t: '最後までやり切って、学位を取る', fx: { know: 10, joy: 5 }, c: -40, d: 'kings', res: '卒業の日、画面越しの拍手を聞きながら、あなたは少しだけ泣きました。' },
+    { t: '授業中に、教授を言い負かす', fx: { know: 5 }, c: -5, res: 'マイクはミュートのままでした。' },
   ] },
   { y: 2016, m: 7, flag: '分岐点', title: '大統領選挙', text: '共和党の候補は、不動産王でテレビの司会者だった男に決まりました。予備選のころ、あなたは彼をあまり好きではありませんでした。', choices: [
-    { t: '候補の長男の、移動とメディアの手配を手伝う', req: { net: 40 }, fail: 'fail_trumpjr', fx: { net: 15, fame: 10 }, res: '空港から空港へ走り回り、カメラの位置を決め、コーヒーを買いました。気がつくと、一家の食卓に呼ばれるようになっていました。', bio: '大統領候補の一家の側近になりました。' },
-    { t: '民主党の候補を支持する', c: -60, d: 'hillary', res: '投票日の夜、あなたは少しだけ誇らしい気持ちで眠りました。' },
+    { t: '候補の長男の、移動とメディアの手配を手伝う', req: { rel: 75 }, fail: 'fail_trumpjr', fx: { rel: 10, fame: 10, hp: -5 }, res: '空港から空港へ走り回り、カメラの位置を決め、コーヒーを買いました。気がつくと、一家の食卓に呼ばれるようになっていました。', bio: '大統領候補の一家の側近になりました。' },
+    { t: '民主党の候補を支持する', fx: { joy: 5 }, c: -60, d: 'hillary', res: '投票日の夜、あなたは少しだけ誇らしい気持ちで眠りました。' },
     { t: '第三党の候補に投票する', c: -40, d: 'johnson', res: 'どちらも選ばない、という選び方もあります。開票速報を見ながら、あなたは誰にともなくそう言いました。' },
   ] },
   { y: 2016, m: 11, title: '一覧表', text: '保守的な学生を不当に扱っているとあなたが思う大学教員を、名前つきの一覧にしました。公開しますか。', choices: [
-    { t: '公開する', fx: { fame: 10, con: 5 }, res: '一覧は大きな騒ぎになりました。抗議のために「私も載せてくれ」と申し出る教員が、1万人を超えました。', bio: '大学教員の一覧を公開しました。' },
-    { t: '公開しない', c: -15, res: '一覧は、パソコンの中で静かに眠りました。' },
-    { t: '「お世話になった先生」の一覧に作り変えて公開する', c: -30, res: '昔の先生から、長い手紙が届きました。あなたはそれを、何年も捨てられませんでした。' },
+    { t: '公開する', fx: { fame: 10, rel: -5 }, res: '一覧は大きな騒ぎになりました。抗議のために「私も載せてくれ」と申し出る教員が、1万人を超えました。', bio: '大学教員の一覧を公開しました。' },
+    { t: '公開しない', fx: { joy: 5 }, c: -15, res: '一覧は、パソコンの中で静かに眠りました。' },
+    { t: '「お世話になった先生」の一覧に作り変えて公開する', fx: { rel: 10, joy: 10 }, c: -30, res: '昔の先生から、長い手紙が届きました。あなたはそれを、何年も捨てられませんでした。' },
   ] },
-  { y: 2018, m: 3, title: '机ひとつ', post: '経済誌の「30歳未満の30人」に選ばれました。', text: '大学のキャンパスの真ん中に、折りたたみの机をひとつ置きます。看板に書く言葉を決めます。', choices: [
-    { t: '「Prove Me Wrong（間違っているなら証明してみろ）」', req: { deb: 55 }, fail: 'fail_pmw', fx: { fame: 15, deb: 5 }, res: '学生が列を作りました。何時間もの言い合いは数十秒に切り取られ、何百万回も再生されていきました。切り取られなかった時間がどこへ行ったのかは、誰も知りません。', bio: '大学のキャンパスに机を置き、学生と言い合いを続けました。' },
+  { y: 2018, m: 3, post: '経済誌の「30歳未満の30人」に選ばれました。', title: '机ひとつ', text: '大学のキャンパスの真ん中に、折りたたみの机をひとつ置きます。看板に書く言葉を決めます。', choices: [
+    { t: '「Prove Me Wrong（間違っているなら証明してみろ）」', req: { know: 85 }, fail: 'fail_pmw', fx: { fame: 15, hp: -5 }, res: '学生が列を作りました。何時間もの言い合いは数十秒に切り取られ、何百万回も再生されていきました。切り取られなかった時間がどこへ行ったのかは、誰も知りません。', bio: '大学のキャンパスに机を置き、学生と言い合いを続けました。', life: { scene: 'campus', cap: '大学のキャンパス · 折りたたみの机 · 学生の列' } },
     { t: '「Change My Mind（考えを変えてみろ）」', death: 'crowder' },
-    { t: '「お悩み聞きます」', c: -25, res: '列の三人目は、失恋したばかりの学生でした。あなたは言い合うかわりに、ただ話を聞きました。その日、動画は一本も撮れませんでした。' },
+    { t: '「お悩み聞きます」', fx: { rel: 10, joy: 5 }, c: -25, res: '列の三人目は、失恋したばかりの学生でした。あなたは言い合うかわりに、ただ話を聞きました。その日、動画は一本も撮れませんでした。' },
   ] },
-  { y: 2020, m: 3, title: 'はじめての本', text: '初めての本を出すことになりました。', choices: [
-    { t: '『The MAGA Doctrine』', fx: { fame: 10, con: 5 }, res: '表紙の自分の顔は、思っていたより少し年上に見えました。', bio: '本を何冊か書きました。' },
-    { t: '『やさしい資本論』', c: -40, d: 'marx_book', res: '誰に向けた本なのか、編集者にも最後まで分かりませんでした。' },
-    { t: '詩集', c: -30, res: '初版は300部でした。そのうちの一冊を、母がいまも枕元に置いています。' },
+  { y: 2020, m: 3, years: [[2019, 5, 'キリスト教系の大学から、名誉博士号を受けました。大学の学位は、まだひとつも持っていません。']], title: 'はじめての本', text: '初めての本を出すことになりました。', choices: [
+    { t: '『The MAGA Doctrine』', fx: { fame: 10, know: 5 }, res: '表紙の自分の顔は、思っていたより少し年上に見えました。', bio: '本を何冊か書きました。' },
+    { t: '『やさしい資本論』', fx: { know: 5 }, c: -40, d: 'marx_book', res: '誰に向けた本なのか、編集者にも最後まで分かりませんでした。' },
+    { t: '詩集', fx: { joy: 10 }, c: -30, res: '初版は300部でした。そのうちの一冊を、母がいまも枕元に置いています。' },
   ] },
-  { y: 2020, m: 10, title: '番組', text: '毎日のトーク番組の話が来ています。', choices: [
-    { t: '毎日3時間、話す', fx: { fame: 15, deb: 10 }, res: '聞いている人の顔は見えません。それでもあなたの声は、毎日どこかの車の中に届いていました。', bio: '毎日3時間の番組で話し続けました。' },
-    { t: '週に1回、15分だけ話す', fx: { fame: 3 }, c: -10, res: '15分は、言いたいことの半分も言えない長さでした。' },
-    { t: '断って、静かに暮らす', c: -35, res: '庭に小さな菜園を作りました。トマトは、テレビより正直でした。' },
+  { y: 2020, m: 10, years: [[2020, 3, '感染症が世界中に広がりました。大学のキャンパスから、学生がいなくなりました。']], title: '番組', text: '毎日のトーク番組の話が来ています。', choices: [
+    { t: '毎日3時間、話す', fx: { fame: 15, hp: -10 }, res: '聞いている人の顔は見えません。それでもあなたの声は、毎日どこかの車の中に届いていました。', bio: '毎日3時間の番組で話し続けました。', life: { scene: 'studio', cap: 'ラジオのスタジオ · マイクが2本' } },
+    { t: '週に1回、15分だけ話す', fx: { fame: 3, joy: 5 }, c: -10, res: '15分は、言いたいことの半分も言えない長さでした。' },
+    { t: '断って、静かに暮らす', fx: { joy: 10, hp: 10 }, c: -35, res: '庭に小さな菜園を作りました。トマトは、テレビより正直でした。' },
   ] },
   { y: 2021, m: 5, flag: '分岐点', title: '結婚', text: '州のミスコンで代表になったことのある女性と、付き合って数年になります。', choices: [
-    { t: '結婚する', fx: { faith: 10 }, res: '式では、二人とも神に誓いました。翌年に娘が、その二年後に息子が生まれます。', bio: '配偶者と4年連れ添い、2人の子どもを育てました。' },
-    { t: '結婚せず、仕事に生きる', c: -60, d: 'single', res: '仕事は順調でした。夜、事務所の明かりを消すのは、いつもあなたが最後でした。' },
+    { t: '結婚する', fx: { joy: 15, rel: 5 }, res: '式では、二人とも神に誓いました。翌年に娘が、その二年後に息子が生まれます。', bio: '配偶者と4年連れ添い、2人の子どもを育てました。', life: { spouse: true, home: 'アリゾナ州', income: '$400,000超', money: '数百万ドル', moneyNote: 'アリゾナに家を持っています', scene: 'house', cap: 'アリゾナ州 · 一戸建て · 配偶者と一緒に' } },
+    { t: '結婚せず、仕事に生きる', fx: { hp: -10 }, c: -60, d: 'single', res: '仕事は順調でした。夜、事務所の明かりを消すのは、いつもあなたが最後でした。' },
   ] },
   { y: 2021, m: 9, title: '信仰', text: '政治の話をしながら、あなたは少しずつ信仰の話をするようになりました。', choices: [
-    { t: '牧師と一緒に、信仰の団体を作る', fx: { faith: 20, con: 5 }, res: '集会の最後に、みんなで祈るようになりました。政治の話と神の話の境目が、少しずつ見えなくなっていきました。', bio: '政治の話に、信仰の話が加わっていきました。' },
-    { t: '神はいないと結論する', c: -60, d: 'atheist', res: '日曜の朝が、急に長くなりました。' },
-    { t: '瞑想アプリで心を整える', c: -20, res: '毎朝10分、呼吸を数えました。怒りは少し減りました。視聴者も少し減りました。' },
+    { t: '牧師と一緒に、信仰の団体を作る', fx: { joy: 5, rel: 5 }, res: '集会の最後に、みんなで祈るようになりました。政治の話と神の話の境目が、少しずつ見えなくなっていきました。', bio: '政治の話に、信仰の話が加わっていきました。', life: { faith: 'キリスト教（福音派）' } },
+    { t: '神はいないと結論する', fx: { know: 5 }, c: -60, d: 'atheist', res: '日曜の朝が、急に長くなりました。', life: { faith: 'なし' } },
+    { t: '瞑想アプリで心を整える', fx: { joy: 10, hp: 5 }, c: -20, res: '毎朝10分、呼吸を数えました。怒りは少し減りました。視聴者も少し減りました。' },
   ] },
-  { y: 2022, m: 8, pre: '娘が生まれました。', title: '大学についての本', text: '大学について、本を書くことにしました。', choices: [
-    { t: '『The College Scam（大学は詐欺）』', fx: { con: 5, fame: 5 }, res: '大学にほとんど通わなかった人が書いた、大学の本でした。よく売れました。' },
-    { t: '大学に入り直して、学び直す', c: -50, d: 'college_return', res: '新入生の中で、あなたはいちばん前の席に座りました。' },
+  { y: 2022, m: 8, years: [[2022, 8, '娘が生まれました。夜中のミルクは、思っていたより重労働でした。', { daughter: true }]], title: '大学についての本', text: '大学について、本を書くことにしました。', choices: [
+    { t: '『The College Scam（大学は詐欺）』', fx: { fame: 5 }, res: '大学にほとんど通わなかった人が書いた、大学の本でした。よく売れました。' },
+    { t: '大学に入り直して、学び直す', fx: { know: 10 }, c: -50, d: 'college_return', res: '新入生の中で、あなたはいちばん前の席に座りました。' },
   ] },
   { pause: true, y: 2023, m: 11, q: '30歳。あなたが30歳のとき、誰の隣にいましたか。' },
-  { y: 2024, m: 4, pre: 'もうすぐ息子が生まれます。', title: '若い人たちのいる場所', text: '若い人たちは、みんな同じアプリの中にいるようです。', choices: [
+  { y: 2024, m: 4, years: [[2024, 5, '息子が生まれます。娘は、弟の名前を十回ほど言い間違えました。', { son: true }]], title: '若い人たちのいる場所', text: '若い人たちは、みんな同じアプリの中にいるようです。', choices: [
     { t: 'TikTok を始める', fx: { fame: 20 }, res: '短く切った言い合いの動画が、政治に興味のない若者のスマートフォンにまで流れていきました。' },
     { t: '「中国のアプリは使わない」と断る', c: -15, res: '筋は通っていました。ただ、若者はみんなそこにいました。' },
-    { t: 'TikTok で踊る', fx: { fame: 5 }, c: -15, res: '再生回数は伸びました。コメント欄は、少しだけ優しくありませんでした。' },
+    { t: 'TikTok で踊る', fx: { fame: 5, joy: 5 }, c: -15, res: '再生回数は伸びました。コメント欄は、少しだけ優しくありませんでした。' },
   ] },
   { y: 2024, m: 10, flag: '分岐点', title: '若い票', text: '大統領選挙。若い有権者を動かせるかどうかが、鍵になっています。', choices: [
-    { t: '大学を回って、若者に投票を呼びかける', req: { fame: 70 }, fail: 'fail_election', fx: { fame: 10, net: 10 }, res: '候補は勝ちました。若い票を動かした一人として、あなたの名前が挙がりました。', bio: '大統領選挙で若者の票を動かしました。' },
+    { t: '大学を回って、若者に投票を呼びかける', req: { fame: 70 }, fail: 'fail_election', fx: { fame: 10, hp: -10 }, res: '候補は勝ちました。若い票を動かした一人として、あなたの名前が挙がりました。', bio: '大統領選挙で若者の票を動かしました。' },
     { t: '今回は静観する', death: 'sitout' },
   ] },
   { y: 2025, m: 9, d: 7, title: '東京', text: 'アジアを回っています。日本の新しい政党に招かれ、東京で話すことになりました。', choices: [
-    { t: '東京で講演する', fx: { fame: 5 }, res: '千人を超える人が集まりました。日本の人の多くは、まだあなたの名前を知りません。それでも、あなたを撮る人はたくさんいました。', bio: '最後に訪れた外国は、日本でした。' },
-    { t: '日本行きを断って、家で過ごす', c: -10, res: '子どもたちと過ごした週末でした。息子は、まだあなたのことを「パパ」としか知りません。' },
-    { t: '秋葉原に行く', c: -5, res: 'オムライスに、ケチャップで何か書いてもらいました。何と書いてもらったのかは、誰にも言いませんでした。' },
+    { t: '東京で講演する', fx: { fame: 5 }, res: '千人を超える人が集まりました。日本の人の多くは、まだあなたの名前を知りません。それでも、あなたを撮る人はたくさんいました。', bio: '最後に訪れた外国は、日本でした。', life: { scene: 'tokyo', cap: '東京 · 講演会場 · 1,200人' } },
+    { t: '日本行きを断って、家で過ごす', fx: { joy: 10 }, c: -10, res: '子どもたちと過ごした週末でした。息子は、まだあなたのことを「パパ」としか知りません。' },
+    { t: '秋葉原に行く', fx: { joy: 15 }, c: -5, res: 'オムライスに、ケチャップで何か書いてもらいました。何と書いてもらったのかは、誰にも言いませんでした。', life: { scene: 'tokyo', cap: '東京 · 秋葉原 · 電気街' } },
   ] },
-  { y: 2025, m: 9, d: 10, flag: '分岐点', title: 'ユタ州', text: '大学を回る講演ツアーが始まりました。今日はユタ州のキャンパスです。白いテントの下に、机とマイクが用意されています。', choices: [
+  { y: 2025, m: 9, d: 10, flag: '分岐点', life: { scene: 'tent', cap: 'ユタ州 · 大学のキャンパス · 白いテント' }, title: 'ユタ州', text: '大学を回る講演ツアーが始まりました。今日はユタ州のキャンパスです。白いテントの下に、机とマイクが用意されています。', choices: [
     { t: 'オレムのユタ・バレー大学で、テントの下に座り、学生の質問に答える', clear: true },
     { t: '体調が悪いことにして、休む', death: 'cancel' },
     { t: 'ソルトレイクシティのユタ大学に向かう', death: 'wrong_utah' },
   ] },
 ];
-const REAL_EVENTS = EVENTS.filter(e => !e.pause).length;
+
+// ---------- 同じ1秒に生まれた人たち ----------
+const PEERS = [
+  { name: 'ジャスミン・ルイス', place: 'ジョージア州アトランタ', sex: '女', home: 'ごく普通の家庭', life: [[0, '幼少期'], [6, '小学生'], [12, '中学生'], [15, '高校生'], [18, '大学生'], [22, '小学校の先生'], [29, '先生 · 子ども1人']] },
+  { name: 'ミゲル・トーレス', place: 'テキサス州サンアントニオ', sex: '男', home: '暮らしに余裕のない家庭', life: [[0, '幼少期'], [6, '小学生'], [12, '中学生'], [15, '高校生'], [18, '陸軍に入隊'], [21, '海外に派遣'], [24, '除隊 · トラック運転手']] },
+  { name: 'エミリー・ショー', place: 'メイン州ポートランド', sex: '女', home: '暮らし向きのよい家庭', life: [[0, '幼少期'], [6, '小学生'], [12, '中学生'], [15, '高校生'], [18, '大学生'], [22, '大学院生'], [26, '看護師 · 夜勤']] },
+  { name: 'デアンドレ・ジョンソン', place: 'ミシガン州デトロイト', sex: '男', home: '暮らしに余裕のない家庭', life: [[0, '幼少期'], [6, '小学生'], [12, '中学生'], [15, '高校生'], [19, '自動車工場で働く'], [26, '工場の班長'], [30, '班長 · 子ども2人']] },
+];
+const peerStage = (p, age) => p.life.filter(([a]) => a <= age).pop()[1];
 
 // ---------- 保存（ブラウザごと。消えても動く） ----------
 const SAVE_KEY = 'one-in-350m-v2';
@@ -224,7 +234,35 @@ function show(id) {
 // ---------- 状態 ----------
 let st = null;
 function newLife() {
-  st = { stats: Object.assign({}, START), cons: 100, idx: 0, bio: [], notes: [], lastChoice: '', loop: save.deaths + save.clears + 1 };
+  st = {
+    stats: Object.assign({}, START), cons: 100, idx: 0, age: 0, bio: [], notes: [], lastChoice: '', joyByAge: {},
+    life: { edu: '就学前', home: 'アーリントンハイツ, イリノイ州', faith: 'キリスト教（長老派）', income: '—', money: '—', moneyNote: 'まだ親の家で暮らしています', sister: false, spouse: false, daughter: false, son: false, scene: 'house', cap: 'イリノイ州アーリントンハイツ · 一戸建て · 両親と一緒に' },
+  };
+}
+function applyLife(o) {
+  if (!o) return;
+  Object.assign(st.life, o);
+}
+
+// ---------- 絵（フラットな SVG） ----------
+const SCENES = {
+  house: '<rect width="400" height="120" fill="#1b2a33"/><rect y="96" width="400" height="24" fill="#22362c"/><g fill="#2b3d48"><rect x="40" y="58" width="70" height="38"/><rect x="150" y="50" width="90" height="46"/><rect x="290" y="60" width="64" height="36"/></g><g fill="#33495a"><polygon points="34,58 75,32 116,58"/><polygon points="142,50 195,22 248,50"/><polygon points="284,60 322,36 360,60"/></g><g fill="#e8c25a"><rect x="58" y="68" width="10" height="10"/><rect x="170" y="62" width="12" height="12"/><rect x="208" y="62" width="12" height="12"/><rect x="306" y="70" width="10" height="10"/></g><circle cx="262" cy="72" r="14" fill="#2f5243"/><rect x="260" y="80" width="4" height="16" fill="#3a2f28"/>',
+  garage: '<rect width="400" height="120" fill="#1b2a33"/><rect y="96" width="400" height="24" fill="#2a2f33"/><rect x="120" y="40" width="160" height="56" fill="#2b3d48"/><rect x="134" y="54" width="132" height="42" fill="#11181c"/><rect x="170" y="76" width="60" height="6" fill="#8a6a4a"/><rect x="176" y="82" width="4" height="14" fill="#8a6a4a"/><rect x="220" y="82" width="4" height="14" fill="#8a6a4a"/><rect x="186" y="66" width="18" height="10" fill="#4cb3b3"/>',
+  campus: '<rect width="400" height="120" fill="#1b2a33"/><rect y="96" width="400" height="24" fill="#22362c"/><rect x="110" y="40" width="180" height="56" fill="#2b3d48"/><polygon points="100,40 200,14 300,40" fill="#33495a"/><g fill="#3d5466"><rect x="124" y="48" width="8" height="48"/><rect x="152" y="48" width="8" height="48"/><rect x="180" y="48" width="8" height="48"/><rect x="212" y="48" width="8" height="48"/><rect x="240" y="48" width="8" height="48"/><rect x="268" y="48" width="8" height="48"/></g><rect x="40" y="86" width="40" height="5" fill="#8a6a4a"/><g fill="#e1e9e6"><rect x="300" y="84" width="6" height="12"/><rect x="312" y="84" width="6" height="12"/><rect x="324" y="84" width="6" height="12"/><rect x="336" y="84" width="6" height="12"/></g>',
+  studio: '<rect width="400" height="120" fill="#141d21"/><rect x="186" y="30" width="28" height="44" rx="14" fill="#8a9a98"/><rect x="198" y="74" width="4" height="22" fill="#8a9a98"/><rect x="180" y="96" width="40" height="5" fill="#8a9a98"/><circle cx="330" cy="30" r="6" fill="#e2678a"/><rect x="60" y="40" width="70" height="40" fill="#24323a"/>',
+  tokyo: '<rect width="400" height="120" fill="#151c2e"/><g fill="#24324a"><rect x="20" y="50" width="40" height="70"/><rect x="70" y="30" width="30" height="90"/><rect x="110" y="60" width="50" height="60"/><rect x="230" y="40" width="36" height="80"/><rect x="280" y="56" width="50" height="64"/><rect x="340" y="34" width="40" height="86"/></g><polygon points="190,120 196,20 202,120" fill="#e2678a"/><g fill="#e8c25a"><rect x="30" y="60" width="4" height="4"/><rect x="80" y="44" width="4" height="4"/><rect x="122" y="72" width="4" height="4"/><rect x="242" y="54" width="4" height="4"/><rect x="352" y="48" width="4" height="4"/></g>',
+  tent: '<rect width="400" height="120" fill="#1b2a33"/><rect y="96" width="400" height="24" fill="#22362c"/><polygon points="140,96 200,42 260,96" fill="#d9dfdd"/><rect x="186" y="80" width="28" height="4" fill="#8a6a4a"/><g fill="#2b3d48"><rect x="30" y="56" width="70" height="40"/><rect x="300" y="50" width="80" height="46"/></g>',
+};
+function sceneSvg(k) { return `<svg viewBox="0 0 400 120" preserveAspectRatio="xMidYMid slice">${SCENES[k] || SCENES.house}</svg>`; }
+function avatarSvg(age) {
+  const s = age < 4 ? 0.55 : age < 12 ? 0.72 : age < 18 ? 0.88 : 1;
+  const body = age >= 18 ? '#26334a' : age >= 12 ? '#4c6d8a' : '#5c8fb3';
+  const h = 80 * s, top = 80 - h, w = 34 * s, x = 32 - w / 2;
+  return `<svg viewBox="0 0 64 80" width="64" height="80" shape-rendering="crispEdges"><rect width="64" height="80" fill="#1b282d"/>
+    <rect x="${x + w * 0.2}" y="${top + 4}" width="${w * 0.6}" height="${h * 0.28}" fill="#e9c3a0"/>
+    <rect x="${x + w * 0.18}" y="${top + 2}" width="${w * 0.64}" height="${h * 0.08}" fill="#8a5a36"/>
+    <rect x="${x}" y="${top + 4 + h * 0.3}" width="${w}" height="${h * 0.62}" fill="${body}"/>
+    ${age >= 18 ? `<rect x="31" y="${top + 4 + h * 0.3}" width="2" height="${h * 0.3}" fill="#e2678a"/>` : ''}</svg>`;
 }
 
 // ---------- タイトル画面 ----------
@@ -271,7 +309,7 @@ function initTitle() {
   updateDexCounts();
 }
 
-// ---------- ルーレット ----------
+// ---------- ルーレット → 出生届 ----------
 const NAMES = ['マイケル', 'マリア', 'ジェシカ', 'デヴィッド', 'エミリー', 'クリストファー', 'アシュリー', 'ダニエル', 'サラ', 'ケヴィン', 'ブリトニー', 'ホセ', 'ジャスティン', 'アマンダ', 'ブランドン', 'ステファニー', 'デショーン', 'メーガン', 'ルイス', 'ハンナ'];
 const PLACES = ['カリフォルニア州', 'テキサス州', 'フロリダ州', 'ニューヨーク州', 'オハイオ州', 'ジョージア州', 'ワシントン州', 'アリゾナ州', 'ミシガン州', 'ペンシルベニア州', 'ルイジアナ州', 'コロラド州', 'テネシー州', 'ハワイ州', 'アラスカ州', 'メイン州'];
 function roll() {
@@ -294,9 +332,14 @@ function roll() {
     placeEl.textContent = 'イリノイ州 · 1993年';
     const prev = save.deaths + save.clears;
     $('roll-note').textContent = prev === 0 ? '男の子として生まれます' : prev === 1 ? '……また、チャーリーでした' : `${prev + 1}回目の、チャーリーです`;
-    setTimeout(startLife, 2200);
+    setTimeout(showCert, 2000);
   };
   step();
+}
+function showCert() {
+  $('cert-no').textContent = 'No. USA-1993-' + String(1014000 + save.births).padStart(7, '0');
+  $('cert-peers').innerHTML = PEERS.map(p => `<div class="peer"><div><b>${p.name}</b><span class="muted">${p.place} · ${p.sex} · ${p.home}</span></div></div>`).join('');
+  show('screen-cert');
 }
 
 // ---------- 人生 ----------
@@ -304,40 +347,77 @@ function startLife() {
   newLife();
   $('life-log').innerHTML = '';
   $('cons-panel').hidden = !revealed();
-  addLog(1993, '10月、イリノイ州の暮らし向きのよい家庭に、男の子として生まれました。');
-  if (save.deaths === 1 && save.clears === 0) addLog(1993, '生まれたばかりのあなたは、なぜか一度も泣きませんでした。前にも、ここに来たことがあるような顔をしていました。');
+  addLog(0, '1993年10月、イリノイ州アーリントンハイツで、暮らし向きのよい家庭に男の子として生まれました。両親は穏健な共和党支持者で、家族は長老派の教会に通っています。');
+  if (save.deaths === 1 && save.clears === 0) addLog(0, '生まれたばかりのあなたは、なぜか一度も泣きませんでした。前にも、ここに来たことがあるような顔をしていました。');
   show('screen-life');
-  renderSide();
+  renderAll();
   renderEvent();
 }
-function addLog(y, text) {
+function addLog(age, text) {
+  document.querySelectorAll('#life-log li.new').forEach(li => li.classList.remove('new'));
   const li = document.createElement('li');
-  li.innerHTML = `<span class="y">${y}</span>${text}`;
-  $('life-log').appendChild(li);
-  $('life-log').scrollTop = $('life-log').scrollHeight;
+  li.className = 'new';
+  li.innerHTML = `<span class="y">${age}歳</span><span>${text}</span>`;
+  $('life-log').prepend(li);
 }
-function renderSide() {
-  $('stat-list').innerHTML = '<h3>能力</h3>' + Object.keys(STATS).map(k =>
-    `<div class="stat"><span>${STATS[k]}</span><div class="track"><div class="fill" style="width:${clamp(st.stats[k])}%"></div></div><span class="num">${st.stats[k]}</span></div>`).join('');
+function renderAll() {
+  const a = st.age;
+  $('life-age').textContent = a;
+  $('stat-list').innerHTML = Object.keys(STATS).map(k =>
+    `<div class="stat"><span>${STATS[k]}</span><div class="track"><div class="fill" style="width:${clamp(st.stats[k])}%;background:${STAT_COLOR[k]}"></div></div><span class="num">${st.stats[k]}</span></div>`).join('');
+  $('v-money').textContent = st.life.money;
+  $('v-money-note').textContent = st.life.moneyNote;
+  $('v-income').textContent = st.life.income;
   const m = $('m-cons');
   m.style.width = st.cons + '%';
   m.classList.toggle('low', st.cons <= 50 && st.cons > 25);
   m.classList.toggle('crit', st.cons <= 25);
   $('v-cons').textContent = st.cons;
+  $('id-edu').textContent = st.life.edu;
+  $('id-home').textContent = st.life.home === 'アリゾナ州' ? 'アリゾナ州' : st.life.home;
+  $('id-faith').textContent = st.life.faith;
+  $('avatar').innerHTML = avatarSvg(a);
+  $('scene-art').innerHTML = sceneSvg(st.life.scene);
+  $('scene-cap').textContent = st.life.cap;
+  const L = st.life, y = BIRTH.y + a;
+  const fam = [
+    ['母', 'キャスリン · 元トレーダー'],
+    ['父', 'ロバート · 建築家'],
+  ];
+  if (L.sister) fam.push(['きょうだい', `妹 ${Math.max(0, y - 1997)}歳`]);
+  if (L.spouse) fam.push(['配偶者', '元ミス・アリゾナ']);
+  const kids = [];
+  if (L.daughter) kids.push(`娘 ${Math.max(0, y - 2022)}歳`);
+  if (L.son) kids.push(`息子 ${Math.max(0, y - 2024)}歳`);
+  if (kids.length) fam.push(['子ども', kids.join(' · ')]);
+  $('family').innerHTML = fam.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
+  $('life-peers').innerHTML = PEERS.map(p => `<div class="peer"><div><b>${p.name}</b><span class="muted small">${p.place.replace(/州.*/, '州')} · ${p.sex}</span></div><span class="muted small">${peerStage(p, a)}</span></div>`).join('');
+  st.joyByAge[a] = st.stats.joy;
+  let last = START.joy;
+  $('life-map').innerHTML = Array.from({ length: 80 }, (_, i) => {
+    if (i in st.joyByAge) last = st.joyByAge[i];
+    const lived = i <= a;
+    const alpha = lived ? (0.25 + 0.75 * last / 100).toFixed(2) : 0;
+    return `<i class="${i === Math.round(LIFE_EXP) ? 'end' : ''}" style="${lived ? `background:rgba(232,194,90,${alpha})` : ''}"></i>`;
+  }).join('');
 }
 function renderEvent() {
   const ev = EVENTS[st.idx];
-  const age = ageAt(ev.y, ev.m, ev.d);
-  (ev.years || []).forEach(([y, t]) => addLog(y, t));
-  if (ev.pre) addLog(ev.y, ev.pre);
+  (ev.years || []).forEach(([y, m, t, life]) => {
+    st.age = Math.max(0, ageAt(y, m));
+    applyLife(life);
+    addLog(st.age, t);
+  });
+  applyLife(ev.life);
+  st.age = ageAt(ev.y, ev.m, ev.d);
   $('life-year').textContent = ev.y;
-  $('life-age').textContent = age;
-  $('ev-when').textContent = `${ev.y}年${ev.m}月${ev.d ? ev.d + '日' : ''} · ${age}歳`;
+  $('ev-when').textContent = `${ev.y}年${ev.m}月${ev.d ? ev.d + '日' : ''}`;
   $('ev-flag').textContent = revealed() && ev.flag ? ev.flag : '';
   $('ev-result').innerHTML = '';
-  const box = $('ev-choices');
-  box.innerHTML = '';
+  $('ev-choices').innerHTML = '';
+  renderAll();
   if (ev.pause) return renderPause(ev);
+  $('ev-kind').textContent = '決断';
   $('ev-title').textContent = ev.title;
   $('ev-text').textContent = ev.text;
   shuffle(ev.choices).forEach((ch, i) => {
@@ -345,13 +425,13 @@ function renderEvent() {
     b.className = 'choice';
     b.textContent = `${i + 1}. ${ch.t}`;
     b.addEventListener('click', () => choose(ch, b));
-    box.appendChild(b);
+    $('ev-choices').appendChild(b);
   });
 }
 function renderPause(ev) {
-  $('ev-title').textContent = 'ひと息';
+  $('ev-kind').textContent = 'ひと息';
+  $('ev-title').textContent = '';
   $('ev-text').innerHTML = `<p class="pause-q">${ev.q}</p><span class="small muted">この人の人生とあなたの人生を重ねて思い浮かべ、よければ一行残しておいてください。</span>`;
-  const box = $('ev-choices');
   const ta = document.createElement('textarea');
   ta.rows = 2; ta.maxLength = 120; ta.placeholder = '（書かずに進んでもかまいません）';
   const go = document.createElement('button');
@@ -362,7 +442,7 @@ function renderPause(ev) {
     if (v) st.notes.push({ q: ev.q, a: v });
     st.idx++; renderEvent();
   });
-  box.append(ta, go);
+  $('ev-choices').append(ta, go);
 }
 function meets(req) {
   const keys = Object.keys(req).filter(k => k !== 'any');
@@ -385,24 +465,23 @@ function choose(ch, btn) {
     if (revealed()) fxText.push(`歴史の整合性 ${ch.c}`);
   }
   if (ch.bio) st.bio.push(ch.bio);
-  addLog(ev.y, ch.res);
-  if (ev.post) addLog(ev.y, ev.post);
-  renderSide();
+  applyLife(ch.life);
+  addLog(st.age, ch.res);
+  if (ev.post) addLog(st.age, ev.post);
+  renderAll();
 
   const r = $('ev-result');
   r.innerHTML = `<p>${ch.res}</p>${fxText.length ? `<p class="fx">${fxText.join(' · ')}</p>` : ''}`;
   const next = document.createElement('button');
   next.className = 'btn-primary';
+  next.textContent = '次の年へ';
   if (st.cons <= 0) {
     // 整合性が尽きた。最初の人生では、何の前触れもなく終わる
-    next.textContent = '次の年へ';
-    next.addEventListener('click', () => die(ch.d && !(ch.d in save.dex) ? ch.d : (ch.d && Math.random() < 0.5 ? ch.d : pickCollapse())));
+    next.addEventListener('click', () => die(ch.d && (!(ch.d in save.dex) || Math.random() < 0.5) ? ch.d : pickCollapse()));
   } else {
-    next.textContent = '次の年へ';
     next.addEventListener('click', () => { st.idx++; renderEvent(); });
   }
   r.appendChild(next);
-  next.focus();
 }
 function pickCollapse() {
   const fresh = COLLAPSE_IDS.filter(id => !save.dex[id]);
@@ -430,8 +509,8 @@ function renderNotes() {
   $('word-note').textContent = '';
 }
 function statsHtml() {
-  return '<h3>最後の能力</h3>' + Object.keys(STATS).map(k =>
-    `<div class="stat"><span>${STATS[k]}</span><div class="track"><div class="fill" style="width:${clamp(st.stats[k])}%"></div></div><span class="num">${st.stats[k]}</span></div>`).join('') +
+  return '<h3>最後の状態</h3>' + Object.keys(STATS).map(k =>
+    `<div class="stat"><span>${STATS[k]}</span><div class="track"><div class="fill" style="width:${clamp(st.stats[k])}%;background:${STAT_COLOR[k]}"></div></div><span class="num">${st.stats[k]}</span></div>`).join('') +
     (revealed() ? `<p class="small muted">歴史の整合性 ${st.cons} / 100</p>` : '');
 }
 function die(id) {
@@ -446,7 +525,7 @@ function die(id) {
 
   $('end-kicker').textContent = `1993 – ${ev.y} · アメリカ`;
   $('end-title').textContent = 'チャーリー';
-  $('end-title').className = 'end-title dead';
+  $('end-title').className = 'end-title';
   $('end-h-summary').textContent = 'この人生';
   $('end-summary').textContent = lifeSummary() + `${age}歳のとき、${d.text}`;
   if (firstDeath) {
@@ -523,7 +602,16 @@ let dexBack = 'screen-title';
 function openDex(from) { dexBack = from; renderDex(); show('screen-dex'); }
 
 // ---------- 配線 ----------
+let toastTimer = 0;
+document.querySelectorAll('.ctrl[data-toast]').forEach(b => b.addEventListener('click', () => {
+  const t = $('toast');
+  t.textContent = b.dataset.toast;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+}));
 $('btn-born').addEventListener('click', roll);
+$('btn-start').addEventListener('click', startLife);
 $('btn-again').addEventListener('click', roll);
 $('btn-dex-born').addEventListener('click', roll);
 $('btn-dex').addEventListener('click', () => openDex('screen-end'));
