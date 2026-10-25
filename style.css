@@ -186,9 +186,20 @@ textarea:focus { outline: none; border-color: var(--muted); }
 .dex-item.locked { color: var(--muted); }
 .dex-item .age { color: var(--muted); font-size: 12px; }
 
+.mini-stats { display: none; }
 @media (max-width: 1000px) {
   .life-grid { grid-template-columns: 1fr; }
   .life-grid > main { order: -1; }
+  /* スマホでは状態と整合性を上端に貼りつけて、スクロールせずに見えるようにする */
+  .topbar-life { position: sticky; top: 0; z-index: 5; background: var(--bg); padding: 8px 0; gap: 4px 12px; }
+  .big-age { font-size: 22px; }
+  .mini-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px 12px; width: 100%; }
+  .mini { font-size: 11px; color: var(--muted); }
+  .mini b { color: var(--text); font-weight: 600; }
+  .mini i { display: block; height: 4px; background: var(--line); border-radius: 2px; overflow: hidden; }
+  .mini s { display: block; height: 100%; text-decoration: none; }
+  .mini.cons { grid-column: span 3; }
+  .mini.cons i { height: 6px; }
 }
 @media (max-width: 760px) {
   .hero { grid-template-columns: 1fr; }

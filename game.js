@@ -367,6 +367,9 @@ function renderAll() {
   m.classList.toggle('low', st.cons <= 50 && st.cons > 25);
   m.classList.toggle('crit', st.cons <= 25);
   $('v-cons').textContent = st.cons;
+  $('mini-stats').innerHTML = Object.keys(STATS).map(k =>
+    `<div class="mini"><span>${STATS[k]} <b>${st.stats[k]}</b></span><i><s style="width:${clamp(st.stats[k])}%;background:${STAT_COLOR[k]}"></s></i></div>`).join('') +
+    (revealed() ? `<div class="mini cons"><span>歴史の整合性 <b>${st.cons}</b></span><i><s style="width:${st.cons}%;background:${st.cons <= 25 ? 'var(--accent)' : st.cons <= 50 ? 'var(--warn)' : 'var(--hp)'}"></s></i></div>` : '');
   $('id-edu').textContent = st.life.edu;
   $('id-home').textContent = st.life.home === 'アリゾナ州' ? 'アリゾナ州' : st.life.home;
   $('id-faith').textContent = st.life.faith;
@@ -456,7 +459,7 @@ function choose(ch, btn) {
   btn.classList.add('picked');
   st.lastChoice = ch.t;
   if (ch.death) return die(ch.death);
-  if (ch.req && !meets(ch.req)) return die(ch.fail);
+  if (ch.req && !meets(ch.req)) return die(ch.fail, ch.req);
   if (ch.clear) return clearGame();
 
   const fxText = [];
@@ -512,7 +515,7 @@ function statsHtml() {
     `<div class="stat"><span>${STATS[k]}</span><div class="track"><div class="fill" style="width:${clamp(st.stats[k])}%;background:${STAT_COLOR[k]}"></div></div><span class="num">${st.stats[k]}</span></div>`).join('') +
     (revealed() ? `<p class="small muted">歴史の整合性 ${st.cons} / 100</p>` : '');
 }
-function die(id) {
+function die(id, req) {
   const ev = EVENTS[st.idx];
   const age = ageAt(ev.y, ev.m, ev.d);
   const d = DEATHS[id];
@@ -534,7 +537,12 @@ function die(id) {
   } else {
     $('end-sub').textContent = `${age}歳で、歴史に修正されました。` + (isNew ? '　死因図鑑に新しく載りました。' : '');
     const reason = d.kind === 'collapse' ? `この人生の持ち主らしくない選択が続き、歴史の整合性が尽きました。最後の選択は「${st.lastChoice}」でした。` : d.reason;
-    $('end-reason').textContent = '修正の理由: ' + reason;
+    if (req) {
+      const now = Object.keys(req).filter(k => k !== 'any').map(k => `${STATS[k]} ${st.stats[k]}`).join('、');
+      $('end-reason').textContent = '修正の理由: ' + reason + `（このときの${now}）`;
+    } else {
+      $('end-reason').textContent = '修正の理由: ' + reason;
+    }
   }
   renderNotes();
   $('end-stats').innerHTML = statsHtml();
